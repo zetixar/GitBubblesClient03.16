@@ -5,7 +5,7 @@ using UnityEngine.Networking;
 using System.Collections;
 
 // must be maintained in common between client and server
-public static class CScommon {
+	public static class CScommon {
 
 	public static int serverPort = 8888;
 
@@ -19,7 +19,7 @@ public static class CScommon {
 	public const short push1Pull2MsgType = 307; //intMsg, manual push/pull 1:push, 2:Pull, 3. togglePushPull, 0. return to automatic pushPull
 	public const short blessMsgType = 308; // intMsg, value = id of node to bless (old, unused keyMsgType)
 	public const short initRevisionMsgType = 309; //InitRevisionMsg, server sends to all clients infrequently, to update relatively static initMsg data.
-	public const short requestNodeIdMsgType = 310; //intMsg, client requests being associated with a given bubble. Server responds with nodeIDMsgType.
+	public const short requestNodeIdMsgType = 310; //intMsg, client requests being associated with a given bubbble. Server responds with nodeIDMsgType.
 	public const short gameSizeMsgType = 311; //GameSizeMsg with numNodes, numLinks, worldRadius
 	//public const short nameNodeIdMsgType = 312; //NameNodeIdMsg, tells all clients what user name is associated with what bubble
 	public const short turnMsgType = 313; //intMsg, -1 means change direction a bit to the left, +1 means a bit to the right, 0 indicates go straight.
@@ -31,10 +31,7 @@ public static class CScommon {
 	// Values 1-9 select a particular predefined game setup to be launched with its default scale values.
 	// Other values scale and restart the current game:
 	// 21/22 scale down/up the average size (radius) of nodes, 
-	// 31/32 scale down/up the ratio between the size of hunter organisms and the size of other organisms,
-	// 41/42 scale down/up photoYield, the rate energy trickles into everyone's tanks, i.e. the 'starved' speed of everything
-	// 51/52 scale down/up baseMetabolicRate, the base rate at which muscles consume energy, i.e. the 'fed' speed of everything
-	// 61/62 scale down/up the worldRadius (which scales up/down the relative lengths of links in the world, i.e. the size of organisms )
+	// 31/32 scale down/u wn/up the worldRadius (which scales up/down the relative lengths of links in the world, i.e. the size of organisms )
 	// 71/72 move down/up by 1/10 between 0 and 1 the fraction of their maxOomph fed to veg nodes before launch
 	// 81/82 move down/up by 1/10 between 0 and 1 the fraction of their maxOomph fed to nonveg nodes before launch
 
@@ -89,10 +86,26 @@ public static class CScommon {
 	//		public KeyCode keyCode;
 	//	}
 
+	public struct TeamStruct {
+		public string teamName;
+		public byte teamNumber;
+		public int nodeId;
+	}
+
+//	public class GameSizeMsg: MessageBase {
+//		public int numNodes;
+//		public int numLinks;
+//		public float worldRadius;
+//	}
+
 	public class GameSizeMsg: MessageBase {
 		public int numNodes;
 		public int numLinks;
-		public float worldRadius;
+		public float worldRadius; 
+
+		public string gameName;
+		public int gameNumber;
+		public TeamStruct[] teams;
 	}
 
 	public class NameNodeIdMsg : MessageBase{

@@ -61,6 +61,9 @@ public class netClientMgr : MonoBehaviour {
 
 	static NetworkClient myClient;
 	static CScommon.GameSizeMsg gameSizeMsg = new CScommon.GameSizeMsg(); //*** I'm not sure whether I need to initilize that or not
+	static Text gameNameDisplaytext;
+	static Transform teamScoreDisplayTransform;
+
 
 	static float camSpeed = 270.0f;
 	static Camera mainCamera;
@@ -92,6 +95,7 @@ public class netClientMgr : MonoBehaviour {
 		camLockBtn = GameObject.Find("camLockBtn").GetComponent<Button>();
 		blessingModeBtn = GameObject.Find("blessingModeBtn").GetComponent<Button>();
 		pusherLinkBtn = GameObject.Find("pusherLinkBtn").GetComponent<Button>();
+		teamScoreDisplayTransform = GameObject.Find("TeamsScoreDisplay").transform;
 
 		myChatInputField.gameObject.SetActive(false);
 		speedSlider.gameObject.SetActive(false);
@@ -220,6 +224,8 @@ public class netClientMgr : MonoBehaviour {
 		serverIPLocalConnectButton.gameObject.SetActive(true);
 		initialized = false;
 		miniCamera.gameObject.SetActive(false);
+		gameNameDisplaytext.gameObject.SetActive(false);
+
 		gameSizeMsg.numNodes = 0;
 		gameSizeMsg.numLinks = 0;
 		if (GOspinner.bubbles != null)
@@ -427,12 +433,14 @@ public class netClientMgr : MonoBehaviour {
 		GOspinner.cleanScene ();
 		GOspinner.settingUpTheScene();
 		miniCamera.gameObject.SetActive(true);
+		gameNameDisplaytext.gameObject.SetActive(true);
 
 		mainCamAudioSource.clip = clipGameSize;
 		mainCamAudioSource.Play();
 
 		Debug.Log(gameSizeMsg.worldRadius);
 	}
+
 
 	public void onInitMsg(NetworkMessage netMsg)
 	{
@@ -577,6 +585,7 @@ public class netClientMgr : MonoBehaviour {
 		public static Transform[] bubbles;
 		public static Transform[] oomphs; //** for displaying oomph around each bubble
 		public static GameObject[] links;
+		public static Transform[] teamsScoreDisplayTransforms;
 
 		private static NetworkMessage lastNetMsg;
 		private static int netMsgsSinceLastUpdate;
@@ -588,6 +597,8 @@ public class netClientMgr : MonoBehaviour {
 		public static Dictionary<int,System.Diagnostics.Stopwatch> stopwatches = new Dictionary<int,System.Diagnostics.Stopwatch>();
 		public static Dictionary<int,Transform> playersNameTransforms;
 		public static Dictionary<int,string> dicPlayerNamesIntString = new Dictionary<int, string>();
+
+
 		#endregion
 
 		#region setting up the scene
@@ -655,6 +666,9 @@ public class netClientMgr : MonoBehaviour {
 			GameObject[] goalclones = GameObject.FindGameObjectsWithTag ("GoalClone");
 			foreach (GameObject goalclone in goalclones)
 				Destroy (goalclone);
+			GameObject[] teamsScoreDisplayTransforms = GameObject.FindGameObjectsWithTag ("teamScoreDisplay");
+			foreach(GameObject teamScoreDisplay in teamsScoreDisplayTransforms)
+				Destroy (teamScoreDisplay);
 		}
 
 		public static void settingUpTheScene()
@@ -680,6 +694,14 @@ public class netClientMgr : MonoBehaviour {
 
 			GOspinner.resetGameStats();
 
+			teamsScoreDisplayTransforms = new Transform[gameSizeMsg.teams.Length];
+			for(int i = 0; i < gameSizeMsg.teams.Length; i++)
+			{
+				teamsScoreDisplayTransforms[i] = (Transform)Instantiate(teamScoreDisplayTransform);
+				teamsScoreDisplayTransforms[i].transform.position = new Vector2 ( teamsScoreDisplayTransforms[i].transform.position.x, 20.0f * i + 5.0f);
+				teamsScoreDisplayTransforms[i].GetComponent<Text>().text = gameSizeMsg.teams[i].teamName + "0";
+				teamsScoreDisplayTransforms[i].GetComponent<Text>().color = gameSizeMsg.teams[i].teamNumber == 1? Color.red: Color.blue;
+			}
 		}
 		
 		internal static void resetGameStats() {
