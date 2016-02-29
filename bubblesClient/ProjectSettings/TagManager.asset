@@ -10,6 +10,7 @@ TagManager:
   - GoalClone
   - LinkCloneBone
   - PlayerName
+  - teamScoreDisplay
   layers:
   - Default
   - TransparentFX

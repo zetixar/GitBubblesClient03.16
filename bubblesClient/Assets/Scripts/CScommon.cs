@@ -5,21 +5,22 @@ using UnityEngine.Networking;
 using System.Collections;
 
 // must be maintained in common between client and server
-public static class CScommon {
+	public static class CScommon {
 
 	public static int serverPort = 8888;
 
 	public const short nodeIdMsgType = 300; //intMsg, server tells a client which bubble they are associated with, often in response to their requestNodeIdMsg
 	public const short updateMsgType = 301; //UpdateMsg, server sends to all clients frequently to update positions of bubbles. Uses DynamicNodeData[]
-	public const short scoreMsgType = 302; //server sends player scores to client
+	public const short performanceMsgType = 302; //server sends player scores to client
 	public const short targetNodeType = 303; //TargetNodeMsg, client tells server that they want a link made from their bubble to a given target bubble
+	public const short teamScoreMsgType = 304;
 	//public const short lookAtNodeType = 304; //unused
 	public const short initMsgType = 305; // InitMsg, server sends to clients relatively static info on many bubbles.
 	public const short initRequestType = 306; //stringMsg containing a name. Client affirms having received gameSizeMsg, requests initialization
 	public const short push1Pull2MsgType = 307; //intMsg, manual push/pull 1:push, 2:Pull, 3. togglePushPull, 0. return to automatic pushPull
 	public const short blessMsgType = 308; // intMsg, value = id of node to bless (old, unused keyMsgType)
 	public const short initRevisionMsgType = 309; //InitRevisionMsg, server sends to all clients infrequently, to update relatively static initMsg data.
-	public const short requestNodeIdMsgType = 310; //intMsg, client requests being associated with a given bubble. Server responds with nodeIDMsgType.
+	public const short requestNodeIdMsgType = 310; //intMsg, client requests being associated with a given bubbble. Server responds with nodeIDMsgType.
 	public const short gameSizeMsgType = 311; //GameSizeMsg with numNodes, numLinks, worldRadius
 	//public const short nameNodeIdMsgType = 312; //NameNodeIdMsg, tells all clients what user name is associated with what bubble
 	public const short turnMsgType = 313; //intMsg, -1 means change direction a bit to the left, +1 means a bit to the right, 0 indicates go straight.
@@ -31,10 +32,7 @@ public static class CScommon {
 	// Values 1-9 select a particular predefined game setup to be launched with its default scale values.
 	// Other values scale and restart the current game:
 	// 21/22 scale down/up the average size (radius) of nodes, 
-	// 31/32 scale down/up the ratio between the size of hunter organisms and the size of other organisms,
-	// 41/42 scale down/up photoYield, the rate energy trickles into everyone's tanks, i.e. the 'starved' speed of everything
-	// 51/52 scale down/up baseMetabolicRate, the base rate at which muscles consume energy, i.e. the 'fed' speed of everything
-	// 61/62 scale down/up the worldRadius (which scales up/down the relative lengths of links in the world, i.e. the size of organisms )
+	// 31/32 scale down/u wn/up the worldRadius (which scales up/down the relative lengths of links in the world, i.e. the size of organisms )
 	// 71/72 move down/up by 1/10 between 0 and 1 the fraction of their maxOomph fed to veg nodes before launch
 	// 81/82 move down/up by 1/10 between 0 and 1 the fraction of their maxOomph fed to nonveg nodes before launch
 
@@ -42,6 +40,7 @@ public static class CScommon {
 	public const short broadCastMsgType = 318; //stringMsg, sent from client to server, and rebroadcast by server to all clients.
 	public const short scaleMsgType = 319; //stringMsg, sent from server to all clients whenever scales are set or changed, a very succinct summary of scales
 	public const short nodeNamesMsgType = 320;
+
 
 	//use value of zero to toggle server "pause" state without changing game.
 
@@ -89,10 +88,26 @@ public static class CScommon {
 	//		public KeyCode keyCode;
 	//	}
 
+	public struct TeamStruct {
+		public string teamName;
+		public byte teamNumber;
+		public int nodeId;
+	}
+
+//	public class GameSizeMsg: MessageBase {
+//		public int numNodes;
+//		public int numLinks;
+//		public float worldRadius;
+//	}
+
 	public class GameSizeMsg: MessageBase {
 		public int numNodes;
 		public int numLinks;
-		public float worldRadius;
+		public float worldRadius; 
+
+		public string gameName;
+		public int gameNumber;
+		public TeamStruct[] teams;
 	}
 
 	public class NameNodeIdMsg : MessageBase{
@@ -110,6 +125,11 @@ public static class CScommon {
 		public NodeName[] arry;
 	}
 
+	public class TeamScoreMsg: MessageBase {
+		public byte teamNumber;
+		public int score;
+	} 
+
 	public struct ScoreStruct{
 		public int nodeId;
 		public int plus;
@@ -118,6 +138,14 @@ public static class CScommon {
 		public float performance; // recent rate at which this player has generated plus (and avoided minus).
 		public long gameMilliseconds;
 	}
+
+
+	public class PerformanceMsg: MessageBase {
+		public int nodeId;
+		public float productivity;
+		public float level;
+	}
+
 
 	public class ScoreMsg: MessageBase{
 		public ScoreStruct[] arry;

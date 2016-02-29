@@ -61,6 +61,9 @@ public class netClientMgr : MonoBehaviour {
 
 	static NetworkClient myClient;
 	static CScommon.GameSizeMsg gameSizeMsg = new CScommon.GameSizeMsg(); //*** I'm not sure whether I need to initilize that or not
+	static Text gameNameDisplaytext;
+	static Transform teamScoreDisplayTransform;
+
 
 	static float camSpeed = 270.0f;
 	static Camera mainCamera;
@@ -92,6 +95,7 @@ public class netClientMgr : MonoBehaviour {
 		camLockBtn = GameObject.Find("camLockBtn").GetComponent<Button>();
 		blessingModeBtn = GameObject.Find("blessingModeBtn").GetComponent<Button>();
 		pusherLinkBtn = GameObject.Find("pusherLinkBtn").GetComponent<Button>();
+		teamScoreDisplayTransform = GameObject.Find("TeamsScoreDisplay").transform;
 
 		myChatInputField.gameObject.SetActive(false);
 		speedSlider.gameObject.SetActive(false);
@@ -220,6 +224,8 @@ public class netClientMgr : MonoBehaviour {
 		serverIPLocalConnectButton.gameObject.SetActive(true);
 		initialized = false;
 		miniCamera.gameObject.SetActive(false);
+		gameNameDisplaytext.gameObject.SetActive(false);
+
 		gameSizeMsg.numNodes = 0;
 		gameSizeMsg.numLinks = 0;
 		if (GOspinner.bubbles != null)
@@ -379,7 +385,8 @@ public class netClientMgr : MonoBehaviour {
 		myClient.RegisterHandler (CScommon.nodeNamesMsgType, onNodeNamesMsg);
 		myClient.RegisterHandler (CScommon.broadCastMsgType, onBroadCastMsg);
 		myClient.RegisterHandler (CScommon.scaleMsgType, onScaleMsg);
-		myClient.RegisterHandler (CScommon.scoreMsgType, onScoreMsg);
+		myClient.RegisterHandler (CScommon.performanceMsgType, onPerformanceMsg);
+		myClient.RegisterHandler (CScommon.teamScoreMsgType, onTeamScoreMsg);
 
 		myClient.Connect(serverIP, CScommon.serverPort);
 		audioSourceBeepSelectNodeForLink.Play ();
@@ -427,12 +434,14 @@ public class netClientMgr : MonoBehaviour {
 		GOspinner.cleanScene ();
 		GOspinner.settingUpTheScene();
 		miniCamera.gameObject.SetActive(true);
+		gameNameDisplaytext.gameObject.SetActive(true);
 
 		mainCamAudioSource.clip = clipGameSize;
 		mainCamAudioSource.Play();
 
 		Debug.Log(gameSizeMsg.worldRadius);
 	}
+
 
 	public void onInitMsg(NetworkMessage netMsg)
 	{
@@ -519,10 +528,16 @@ public class netClientMgr : MonoBehaviour {
 	}
 
 
-	public void onScoreMsg(NetworkMessage netMsg)
+	public void onPerformanceMsg(NetworkMessage netMsg)
 	{
-		CScommon.ScoreMsg scoreMsg = netMsg.ReadMessage<CScommon.ScoreMsg>();
+		CScommon.PerformanceMsg scoreMsg = netMsg.ReadMessage<CScommon.PerformanceMsg>();
 		GOspinner.scoreManager(scoreMsg);
+	}
+
+	public void onTeamScoreMsg(NetworkMessage netMsg)
+	{
+		CScommon.TeamScoreMsg teamScoreMsg = netMsg.ReadMessage<CScommon.TeamScoreMsg>();
+		GOspinner.teamScoreManager(teamScoreMsg);
 	}
 
 	#endregion
@@ -577,6 +592,7 @@ public class netClientMgr : MonoBehaviour {
 		public static Transform[] bubbles;
 		public static Transform[] oomphs; //** for displaying oomph around each bubble
 		public static GameObject[] links;
+		public static Transform[] teamsScoreDisplayTransforms;
 
 		private static NetworkMessage lastNetMsg;
 		private static int netMsgsSinceLastUpdate;
@@ -584,10 +600,12 @@ public class netClientMgr : MonoBehaviour {
 		public static CScommon.UpdateMsg updateMsg;
 		public static CScommon.InitMsg initMsg;
 		public static CScommon.LinksMsg linkMsg;
-		public static Dictionary<int,CScommon.ScoreStruct> scoreMsgGOspinner; //int = nodeID
+		public static Dictionary<int,CScommon.PerformanceMsg> scoreMsgGOspinner; //int = nodeID
 		public static Dictionary<int,System.Diagnostics.Stopwatch> stopwatches = new Dictionary<int,System.Diagnostics.Stopwatch>();
 		public static Dictionary<int,Transform> playersNameTransforms;
 		public static Dictionary<int,string> dicPlayerNamesIntString = new Dictionary<int, string>();
+
+
 		#endregion
 
 		#region setting up the scene
@@ -655,6 +673,9 @@ public class netClientMgr : MonoBehaviour {
 			GameObject[] goalclones = GameObject.FindGameObjectsWithTag ("GoalClone");
 			foreach (GameObject goalclone in goalclones)
 				Destroy (goalclone);
+			GameObject[] teamsScoreDisplayTransforms = GameObject.FindGameObjectsWithTag ("teamScoreDisplay");
+			foreach(GameObject teamScoreDisplay in teamsScoreDisplayTransforms)
+				Destroy (teamScoreDisplay);
 		}
 
 		public static void settingUpTheScene()
@@ -675,11 +696,20 @@ public class netClientMgr : MonoBehaviour {
 			
 			GOspinner.dicPlayerNamesIntString = new Dictionary<int, string>();
 			GOspinner.playersNameTransforms = new Dictionary<int, Transform>();
-			GOspinner.scoreMsgGOspinner = new Dictionary<int, CScommon.ScoreStruct>();
+			GOspinner.scoreMsgGOspinner = new Dictionary<int, CScommon.PerformanceMsg>();
 			GOspinner.stopwatches = new Dictionary<int,System.Diagnostics.Stopwatch>();
 
 			GOspinner.resetGameStats();
 
+			teamsScoreDisplayTransforms = new Transform[gameSizeMsg.teams.Length];
+			for(int i = 0; i < gameSizeMsg.teams.Length; i++)
+			{
+				teamsScoreDisplayTransforms[i] = (Transform)Instantiate(teamScoreDisplayTransform);
+				//$$scale and color and position of it should be tested
+				teamsScoreDisplayTransforms[i].transform.position = new Vector2 ( teamsScoreDisplayTransforms[i].transform.position.x, 20.0f * i + 5.0f);
+				teamsScoreDisplayTransforms[i].GetComponent<Text>().text = gameSizeMsg.teams[i].teamName + "0";
+				teamsScoreDisplayTransforms[i].GetComponent<Text>().color = gameSizeMsg.teams[i].teamNumber == 1? Color.red: Color.blue;
+			}
 		}
 		
 		internal static void resetGameStats() {
@@ -694,6 +724,8 @@ public class netClientMgr : MonoBehaviour {
 			followingCamera = false;
 			displayNames = 2;
 			changeHowToDisPlayPlayersName();
+			teamOneScoreForPast = 0;
+			teamTwoScoreForPast = 0;
 		}
 		#endregion
 
@@ -1003,6 +1035,10 @@ public class netClientMgr : MonoBehaviour {
 //						                        (updateMsg.nodeData[i].oomph), (Mathf.Sqrt(updateMsg.nodeData[i].oomph) / 2f), initMsg.nodeData[i].radius, oomphs[i].position.y -  bubbles[i].position.y ));
 //					}
 
+
+//					if (i == gameSizeMsg.teams
+
+
 				if(myNodeIndex != -1 && playersNameTransforms.ContainsKey(i))
 					{
 						if (i == myNodeIndex)
@@ -1092,46 +1128,63 @@ public class netClientMgr : MonoBehaviour {
 			changeHowToDisPlayPlayersName();
 		}
 
-		public static void scoreManager(CScommon.ScoreMsg scoreMsg)
+
+		static int teamOneScoreForPast;
+		static int teamTwoScoreForPast;
+
+		public static void teamScoreManager(CScommon.TeamScoreMsg teamScoreMsg)
 		{
-
-			for(int i=0; i < scoreMsg.arry.Length; i++)
+			if (teamScoreMsg.teamNumber == 0)
 			{
-				int nodeId = scoreMsg.arry[i].nodeId;
-
-				if(scoreMsgGOspinner.ContainsKey(nodeId)) 
+				if(teamOneScoreForPast == 0 )
 				{
-					scoreMsgGOspinner.Remove(nodeId); 
+					teamOneScoreForPast = teamScoreMsg.score;
 				}
-				if(nodeId == myNodeIndex)
-				{
-					if(scoreMsg.arry[i].neither0Winner1Loser2 == 1)
-					{
-						bubbles[nodeId].GetComponent<AudioSource>().clip = clipEatingOthers;
-						bubbles[nodeId].GetComponent<AudioSource>().Play();
-					}
-					if(scoreMsg.arry[i].neither0Winner1Loser2 == 2)
-					{
-						bubbles[nodeId].GetComponent<AudioSource>().clip = clipGetEatenByOthers;
-						bubbles[nodeId].GetComponent<AudioSource>().Play();
-					}
-				}
+			teamsScoreDisplayTransforms[teamScoreMsg.teamNumber].GetComponent<Text>().text = 
+					gameSizeMsg.teams[teamScoreMsg.teamNumber].teamName + ": " + (teamScoreMsg.score - teamOneScoreForPast);
+			}
 
-				scoreMsgGOspinner.Add(nodeId,scoreMsg.arry[i]);// I don't need to delete any score from this dictionary
-
-				if(!stopwatches.ContainsKey(nodeId))
+			if (teamScoreMsg.teamNumber == 1)
+			{
+				if(teamTwoScoreForPast == 0 )
 				{
-					System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
-					stopwatches.Add(nodeId,stopwatch);
+					teamTwoScoreForPast = teamScoreMsg.score;
 				}
-				stopwatches[nodeId].Reset();
-				stopwatches[nodeId].Start ();
-				//				if(!scoreMsg.zeroAteOne)continue;
-				//because even if some body go out of the game I set that node to have no name and if some body else take the same node
-				//I'll get scoreMsg with zero for this node and I'll replace previous score with new one which is zero.
-				displayNameChanger(nodeId);
+				teamsScoreDisplayTransforms[teamScoreMsg.teamNumber].GetComponent<Text>().text = 
+					gameSizeMsg.teams[teamScoreMsg.teamNumber].teamName + ": " + (teamScoreMsg.score - teamTwoScoreForPast);
 			}
 		}
+
+
+
+		public static void scoreManager(CScommon.PerformanceMsg performanceMsg)
+		{
+
+			int nodeId = performanceMsg.nodeId;
+
+			if(scoreMsgGOspinner.ContainsKey(nodeId)) 
+			{
+				scoreMsgGOspinner.Remove(nodeId); 
+			}
+//				if(nodeId == myNodeIndex)
+//				{
+//					if(performanceMsg.arry[i].neither0Winner1Loser2 == 1)
+//					{
+//						bubbles[nodeId].GetComponent<AudioSource>().clip = clipEatingOthers;
+//						bubbles[nodeId].GetComponent<AudioSource>().Play();
+//					}
+//					if(performanceMsg.arry[i].neither0Winner1Loser2 == 2)
+//					{
+//						bubbles[nodeId].GetComponent<AudioSource>().clip = clipGetEatenByOthers;
+//						bubbles[nodeId].GetComponent<AudioSource>().Play();
+//					}
+//				}
+
+			scoreMsgGOspinner.Add(nodeId,performanceMsg);// I don't need to delete any score from this dictionary
+
+			displayNameChanger(nodeId);
+		}
+
 
 		public static void displayNamesManager()
 		{
@@ -1144,18 +1197,13 @@ public class netClientMgr : MonoBehaviour {
 		{
 			playersNameTransforms[nodeId].FindChild("playerNameMainCam").GetComponent<TextMesh>().text =
 				" " + GOspinner.dicPlayerNamesIntString[nodeId] +
-				"\n +" + scoreMsgGOspinner[nodeId].plus.ToString()+"    -" + scoreMsgGOspinner[nodeId].minus.ToString();
+				"\n P: " + scoreMsgGOspinner[nodeId].productivity.ToString()+"L: " + scoreMsgGOspinner[nodeId].level.ToString();
 			//					+ " P" + currentPerformance(nodeId).ToString();
 			playersNameTransforms[nodeId].FindChild("playerNameMiniMap").GetComponent<TextMesh>().text =
-				" " + GOspinner.dicPlayerNamesIntString[nodeId]+": +" + scoreMsgGOspinner[nodeId].plus.ToString()+"    -" + scoreMsgGOspinner[nodeId].minus.ToString();
+				" " + GOspinner.dicPlayerNamesIntString[nodeId]+": P: " + scoreMsgGOspinner[nodeId].productivity.ToString()+"L: " + scoreMsgGOspinner[nodeId].level.ToString();
 			//					+ " P" + currentPerformance(nodeId).ToString();
 		}
-
-		public static float currentPerformance(int nodeId)
-		{
-			long delta = stopwatches[nodeId].ElapsedMilliseconds; //the amount of time, in milliseconds, since you last received a scoreMsg for this player
-			return Mathf.Round(scoreMsgGOspinner[nodeId].performance * Mathf.Pow(2,-delta/CScommon.performanceHalfLifeMilliseconds)* 100f) / 100f;
-		}
+			
 
 		private static int displayNames = 0; // 0 display all, 1 display only on minimap, 2 display only on main scene, 3 don't displaythem
 		private static void changeHowToDisPlayPlayersName()
