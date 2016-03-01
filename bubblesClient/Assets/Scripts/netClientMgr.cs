@@ -705,7 +705,10 @@ public class netClientMgr : MonoBehaviour {
 			for(int i = 0; i < gameSizeMsg.teams.Length; i++)
 			{
 				teamsScoreDisplayTransforms[i] = (Transform)Instantiate(teamScoreDisplayTransform);
+<<<<<<< HEAD
 				//$$scale and color and position of it should be tested
+=======
+>>>>>>> e3c099302979c140c0eaaeaa9373cf8700d78475
 				teamsScoreDisplayTransforms[i].transform.position = new Vector2 ( teamsScoreDisplayTransforms[i].transform.position.x, 20.0f * i + 5.0f);
 				teamsScoreDisplayTransforms[i].GetComponent<Text>().text = gameSizeMsg.teams[i].teamName + "0";
 				teamsScoreDisplayTransforms[i].GetComponent<Text>().color = gameSizeMsg.teams[i].teamNumber == 1? Color.red: Color.blue;
